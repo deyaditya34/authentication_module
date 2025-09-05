@@ -1,28 +1,21 @@
 const httpError = require("http-errors");
+
+const config = require("../config");
 const buildApiHandler = require("../api-utils/build-api-handler");
 const authService = require("../auth/auth.service");
 
-async function controller(req, res) {
-  const token = req.cookies.token;
-  
-  if (!token) {
-    throw new httpError.Forbidden("Access Denied");
-  }
+async function controller(req, res, next) {
+    const accessToken = req.cookies[config.ACCESS_TOKEN_HEADER_FIELD];
+    const refreshToken = req.cookies[config.REFRESH_TOKEN_HEADER_FIELD];
 
-  const user = await authService.getUserFromToken(token);
-
-  if (!user) {
-    res.json({
-      success: false,
-      error: "Invalid Token",
-    });
-    return;
-  }
-
-  res.json({
-    success: true,
-    data: "user verified",
-  });
+    if (!accessToken) {
+        throw new httpError.Forbidden("Access Denied");
+    }
+    
+    return res.json({
+        success: true,
+        message: "user has a access token"
+    })
 }
 
 module.exports = buildApiHandler([controller]);

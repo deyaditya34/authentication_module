@@ -1,27 +1,34 @@
+const config = require("../config");
 const authService = require("./auth.service");
 const buildApiHandler = require("../api-utils/build-api-handler");
 const paramsValidator = require("../middlewares/params-validator");
 
 async function controller(req, res) {
-  const { username, password } = req.body;
-  console.log("username -", username);
-  const token = await authService.login(username, password);
+    const { username, password } = req.body;
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-  });
+    const {accessToken, refreshToken} = await authService.login(username, password);
 
-  res.json({
-    success: true,
-    data: "login successful",
-  });
+    res.cookie(config.ACCESS_TOKEN_HEADER_FIELD, accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+    });
+
+    res.cookie(config.REFRESH_TOKEN_HEADER_FIELD, refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None"
+    })
+
+    res.json({
+        success: true,
+        data: "login successful",
+    });
 }
 
 const missingParamsValidator = paramsValidator.createParamValidator(
-  ["username", "password"],
-  paramsValidator.PARAM_KEY.BODY
+    ["username", "password"],
+    paramsValidator.PARAM_KEY.BODY
 );
 
 module.exports = buildApiHandler([missingParamsValidator, controller]);

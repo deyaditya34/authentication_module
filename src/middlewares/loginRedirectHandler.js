@@ -1,29 +1,31 @@
-const httpError = require("http-errors");
-
 const config = require("../config");
-const { getUserFromToken } = require("../auth/auth.service");
-const { createToken } = require("../services/jwt.service")
+const buildApiHandler = require("../api-utils/build-api-handler");
+const authService = require("../auth/auth.service");
+const { createToken } = require("../services/jwt.service");
 
-async function userResolver(req, res, next) {
+async function controller(req, res, next) {
     const accessToken = req.cookies[config.ACCESS_TOKEN_HEADER_FIELD];
     const refreshToken = req.cookies[config.REFRESH_TOKEN_HEADER_FIELD];
 
-    if (!accessToken) {
-        throw new httpError.Forbidden("Access Denied");
+    const reqUrl = req.originalUrl;
+
+    if (reqUrl === "/" || !accessToken) {
+        return next()
     }
 
-    const [err, user] = await getUserFromToken(accessToken);
+    let [err, user] = await authService.getUserFromToken(accessToken);
 
     if (!user) {
         if (err.message !== "jwt expired") {
-            throw new httpError.Forbidden("Invalid Token");
+            return res.redirect("/");
         }
 
-        const [err, user] = await getUserFromToken(refreshToken);
+        [err, user] = await authService.getUserFromToken(refreshToken);
 
         if (err) {
-            throw new httpError.Forbidden("Invalid Token")
+            return res.redirect("/")
         }
+
 
         const newAccessToken = createToken(
             { username: user.username },
@@ -48,9 +50,7 @@ async function userResolver(req, res, next) {
         })
     }
 
-    Reflect.set(req.body, "user", user);
-
-    next();
+    return res.redirect("/protected/page1.html")
 }
 
-module.exports = userResolver;
+module.exports = buildApiHandler([controller]);

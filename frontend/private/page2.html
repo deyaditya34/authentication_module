@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Page 2</title>
+    </head>
+    <style>
+        #nav_container {
+            display: flex;
+            justify-content: space-around;
+        }
+   </style>
+    <body>
+        <div id="main_container">
+            <div id="nav_container">
+            <div>
+                <a href="/protected/page1.html">Page 1</a>
+            </div>
+            <div>
+                <a>Page 2</h1>            
+            </div>
+            <div>
+                <a href="/protected/page3.html">Page 3</a>
+            </div>
+            <div id="logout">
+                <button id="logout_button">Logout</button>
+            </div>
+            </div>
+            <div id="testing_container">
+                <button id="testing_button">click me</button>
+                <div id='testing_text'></div>
+            </div>
+        </div>
+    </body>
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch("/api/auth/logout", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    mode: "cors"
+                })
+                
+                const responseData = await response.json();
+
+                if (responseData.success) {
+                    alert(responseData.data);
+                    window.location.href = "/";
+                } else {
+                    alert("server error, please try again")
+                }
+            } catch (err) {
+                console.log("error while logging out -", err);
+                alert("server error, please try again")
+            }
+        }
+    </script>
+</html>

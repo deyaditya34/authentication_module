@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Page 1</title>
+    </head>
+    <style>
+        #nav_container {
+            display: flex;
+            justify-content: space-around;
+        }
+   </style>
+    <body>
+        <div id="main_container">
+            <div id="nav_container">
+            <div>
+                <a>Page 1</a>            
+            </div>
+            <div>
+                <a href="/protected/page2.html">Page 2</a>
+            </div>
+            <div>
+                <a href="/protected/page3.html">Page 3</a>
+            </div>
+            <div id="logout">
+                <button id="logout_button">Logout</button>
+            </div>
+            </div>
+            <div id="testing_container">
+                <button id="testing_button">click me</button>
+                <div id='testing_text'></div>
+            </div>
+        </div>
+    </body>
+    <script>
+//        window.onload = checkAuth;
+
+        async function checkAuth() {
+            console.log("checking auth inside page1");
+            try {
+                const response = await fetch('/api/auth/check-token', {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    mode: "cors"
+                })
+
+                const responseData = await response.json();
+                if (!responseData.success) {
+                    console.log("token invalid or expired");
+                    window.location.href = "/";
+                }
+            } catch (err) {
+                console.log("err while checking token-", err);
+                window.location.href = "/";     
+            }
+        }     
+
+        async function logout() {
+            try {
+                const response = await fetch("/api/auth/logout", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    mode: "cors"
+                })
+                
+                const responseData = await response.json();
+
+                if (responseData.success) {
+                    alert(responseData.data);
+                    window.location.href = "/";
+                } else {
+                    alert("server error, please try again")
+                }
+            } catch (err) {
+                console.log("error while logging out -", err);
+                alert("server error, please try again")
+            }
+       }
+
+    </script>
+</html>
