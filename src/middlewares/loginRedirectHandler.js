@@ -1,56 +1,69 @@
-const config = require("../config");
-const buildApiHandler = require("../api-utils/build-api-handler");
-const authService = require("../auth/auth.service");
-const { createToken } = require("../services/jwt.service");
+const config = require('../config');
+const buildApiHandler = require('../api-utils/build-api-handler');
+const authService = require('../auth/auth.service');
+const jwtService = require('../services/jwt.service');
+const tokenService = require('../token/token.service');
 
 async function controller(req, res, next) {
-    const accessToken = req.cookies[config.ACCESS_TOKEN_HEADER_FIELD];
-    const refreshToken = req.cookies[config.REFRESH_TOKEN_HEADER_FIELD];
+  const accessToken = req.cookies[config.ACCESS_TOKEN_HEADER_FIELD];
 
-    const reqUrl = req.originalUrl;
+  const reqUrl = req.originalUrl;
 
-    if (reqUrl === "/" || !accessToken) {
-        return next()
+  if (!accessToken) {
+    if (reqUrl === '/') {
+      return next();
+    }
+    return res.redirect('/');
+  }
+
+  let [err, user] = await authService.getUserFromToken(accessToken);
+
+  if (!user) {
+    if (err.name !== 'TokenExpiredError') {
+      if (reqUrl === '/') {
+        return next();
+      }
+      return res.redirect('/');
     }
 
-    let [err, user] = await authService.getUserFromToken(accessToken);
+    const decodeToken = jwtService.decodeToken(accessToken);
 
-    if (!user) {
-        if (err.message !== "jwt expired") {
-            return res.redirect("/");
-        }
+    const userRefreshToken = await tokenService.findRefreshToken(
+      decodeToken.username,
+      decodeToken.provider
+    );
 
-        [err, user] = await authService.getUserFromToken(refreshToken);
+    [err, user] = await authService.getUserFromToken(userRefreshToken);
 
-        if (err) {
-            return res.redirect("/")
-        }
-
-
-        const newAccessToken = createToken(
-            { username: user.username },
-            config.ACCESS_TOKEN_VALIDITY
-
-        );
-        const newRefreshToken = createToken(
-            { username: user.username },
-            config.REFRESH_TOKEN_VALIDITY
-
-        );
-
-        res.cookie(config.ACCESS_TOKEN_HEADER_FIELD, newAccessToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "None"
-        })
-        res.cookie(config.REFRESH_TOKEN_HEADER_FIELD, newRefreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "None"
-        })
+    if (err) {
+      if (reqUrl === '/') {
+        return next();
+      }
+      return res.redirect('/');
     }
 
-    return res.redirect("/protected/page1.html")
+    const { accessToken, refreshToken } = authService.createTokens(
+      decodeToken.username,
+      decodeToken.provider
+    );
+
+    res.cookie(config.ACCESS_TOKEN_HEADER_FIELD, accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+    });
+
+    await tokenService.updateRefreshToken(
+      decodeToken.username,
+      refreshToken,
+      decodeToken.provider
+    );
+  }
+
+  if (reqUrl === '/') {
+    return res.redirect('/protected/page1.html');
+  }
+  return res.redirect('/');
 }
 
 module.exports = buildApiHandler([controller]);
