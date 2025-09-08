@@ -1,4 +1,5 @@
 const httpError = require("http-errors");
+
 const config = require("../config")
 const database = require("../services/database.service");
 const jwtService = require("../services/jwt.service");
@@ -36,14 +37,14 @@ async function checkUserRegistered(username, provider) {
     }
 
     return false;
-
 }
 
-async function login(username, password) {
+async function login(username, password, provider) {
+    console.log(password, typeof password);
     const user = await database.getCollection(config.COLLECTION_NAMES_USERS).findOne({
         username,
         password: password ? encryptPassword(password) : null,
-
+        provider
     });
 
     if (!user) {
@@ -51,32 +52,31 @@ async function login(username, password) {
 
     }
 
-    const accessToken = jwtService.createToken(
-        { username },
-        config.ACCESS_TOKEN_VALIDITY
-
-    );
-    const refreshToken = jwtService.createToken(
-        { username },
-        config.REFRESH_TOKEN_VALIDITY
-
-    );
+    const { accessToken, refreshToken } = createTokens(username, provider);
 
     return { accessToken, refreshToken };
 }
 
 async function getUserFromToken(token) {
     try {
-        const payload = jwtService.decodeToken(token);
+        const payload = jwtService.verifyToken(token);
 
         if (!payload) {
             return [{ error: true, message: "invalid token" }, null];
         }
 
         const username = payload.username;
+        const provider = payload.provider;
+
+        const query = {}
+        query.username = username;
+        if (provider) {
+            query.provider = provider
+        }
+
         const user = await database
             .getCollection(config.COLLECTION_NAMES_USERS)
-            .findOne({ username }, {
+            .findOne(query, {
                 projection: {
                     _id: false, password: false, provider: false,
                     email: false, picture: false, firstName: false, middleName: false, lastName: false
@@ -101,25 +101,10 @@ async function findUsers(criteria) {
         .toArray();
 }
 
-async function changePassword(username, password, newPassword) {
-    const user = await database.getCollection(config.COLLECTION_NAMES_USERS).findOne({
-        username,
-        password: encryptPassword(password),
-    });
-
-    if (!user) {
-        throw new httpError.Unauthorized("Username/Password combo incorrect");
-    }
-
-    let newPasswordEncrypted = encryptPassword(username, newPassword);
-
-    await database
+async function findUser(username, provider) {
+    return database
         .getCollection(config.COLLECTION_NAMES_USERS)
-        .updateOne({ username }, { $set: { password: newPasswordEncrypted } });
-
-    const token = jwtService.createToken({ username });
-
-    return token;
+        .findOne({ username, provider })
 }
 
 async function retrieveUserDetails(username) {
@@ -128,34 +113,33 @@ async function retrieveUserDetails(username) {
         .findOne({ username: username });
 }
 
-async function updatePassword(userDetails, username, password, newPassword) {
-    if (userDetails.username !== username) {
-        throw new httpError.Unauthorized(
-            "Username provided does not match with the username stored in the database."
-        );
-    }
-
-    if (userDetails.password !== encryptPassword(password)) {
-        throw new httpError.Unauthorized(
-            "Password doesnot match with the user Password saved in the database."
-        );
-    }
-
-    await database
+async function changePassword(username, password) {
+    return database
         .getCollection(config.COLLECTION_NAMES_USERS)
-        .updateOne(
-            { username: userDetails.username },
-            { $set: { password: encryptPassword(newPassword) } }
-        );
+        .updateOne({ username }, { $set: { password: encryptPassword(password) } })
+}
+
+function createTokens(username, provider) {
+    const accessToken = jwtService.createToken(
+        { username, provider },
+        config.ACCESS_TOKEN_VALIDITY
+    )
+    const refreshToken = jwtService.createToken(
+        { username },
+        config.REFRESH_TOKEN_VALIDITY
+    )
+
+    return { accessToken, refreshToken }
 }
 
 module.exports = {
     register,
     login,
     getUserFromToken,
+    findUser,
     findUsers,
     changePassword,
     retrieveUserDetails,
-    updatePassword,
-    checkUserRegistered
+    checkUserRegistered,
+    createTokens
 };

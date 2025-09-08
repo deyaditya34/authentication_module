@@ -5,32 +5,41 @@ const { validateUsername } = require("./auth.utils");
 const userResolver = require("../middlewares/user-resolver");
 
 async function controller(req, res) {
-  const { user, username, password, newPassword } = req.body;
+    const { username, password } = req.body;
 
-  const userDetails = await authService.retrieveUserDetails(user.username);
+    const userPasswordUpdate = await authService.changePassword(username, password);
 
-  await authService.updatePassword(
-    userDetails,
-    username,
-    password,
-    newPassword
-  );
+    if (userPasswordUpdate.modifiedCount) {
+        return res.json({
+            success: true,
+            data: "password changed successfully"
+        })
+    }
 
-  res.json({
-    message: "Password Changed Successfully",
-  });
+    if (!userPasswordUpdate.matchedCount) {
+        return res.json({
+            success: false,
+            error: "user not found"
+        })
+    }
+
+    if (userPasswordUpdate.matchedCount && !userPasswordUpdate.modifiedCount) {
+        return res.json({
+            success: true,
+            error: "new password cannot be same as old password"
+        })
+    }
 }
 
 const usernameValidator = validateUsername;
 
 const missingParamsValidator = paramsValidator.createParamValidator(
-  ["username", "password", "newPassword"],
-  paramsValidator.PARAM_KEY.BODY
+    ["username", "password"],
+    paramsValidator.PARAM_KEY.BODY
 );
 
 module.exports = buildApiHandler([
-  userResolver,
-  missingParamsValidator,
-  usernameValidator,
-  controller,
+    missingParamsValidator,
+    usernameValidator,
+    controller,
 ]);
