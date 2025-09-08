@@ -12,7 +12,7 @@ function createToken(payload, expireTimeMin) {
     return token;
 }
 
-function decodeToken(token) {
+function verifyToken(token) {
     try {
         return jwt.verify(token, config.JWT_SECRET);
     } catch (err) {
@@ -20,7 +20,12 @@ function decodeToken(token) {
     }
 }
 
+function decodeToken(token) {
+    return jwt.decode(token, config.JWT_SECRET);
+}
+
 module.exports = {
     createToken,
-    decodeToken
+    decodeToken,
+    verifyToken,
 }
