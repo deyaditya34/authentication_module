@@ -22,7 +22,7 @@
                 <a>Page 3</a>            
             </div>
             <div id="logout">
-                <button id="logout_button">Logout</button>
+                <button id="logout_button" onclick="logout(event)">Logout</button>
             </div>
             </div>
             <div id="testing_container">
@@ -32,10 +32,10 @@
         </div>
     </body>
     <script>
-            async function logout() {
+            async function logout(event) {
             try {
                 const response = await fetch("/api/auth/logout", {
-                    method: "GET",
+                    method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },

@@ -22,7 +22,7 @@
                 <a href="/protected/page3.html">Page 3</a>
             </div>
             <div id="logout">
-                <button id="logout_button">Logout</button>
+                <button id="logout_button" onclick="logout(event)">Logout</button>
             </div>
             </div>
             <div id="testing_container">
@@ -32,35 +32,10 @@
         </div>
     </body>
     <script>
-//        window.onload = checkAuth;
-
-        async function checkAuth() {
-            console.log("checking auth inside page1");
-            try {
-                const response = await fetch('/api/auth/check-token', {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    credentials: "include",
-                    mode: "cors"
-                })
-
-                const responseData = await response.json();
-                if (!responseData.success) {
-                    console.log("token invalid or expired");
-                    window.location.href = "/";
-                }
-            } catch (err) {
-                console.log("err while checking token-", err);
-                window.location.href = "/";     
-            }
-        }     
-
-        async function logout() {
+        async function logout(event) {
             try {
                 const response = await fetch("/api/auth/logout", {
-                    method: "GET",
+                    method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
@@ -81,6 +56,5 @@
                 alert("server error, please try again")
             }
        }
-
     </script>
 </html>

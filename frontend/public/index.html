@@ -93,8 +93,9 @@
           <input
             type="submit"
             value="Forgot Password"
-            onclick="forgotPassword(event)"/>
+            onclick="forgotPassword(event)" />
         </form>
+        <div id="otpContainer"></div>
         <script>
           async function googleLogin(event) {
             event.preventDefault();
@@ -179,6 +180,154 @@
               }
             } catch (err) {
               console.log('The error is -', err);
+            }
+          }
+
+          function forgotPassword(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+
+            if (!username) {
+              alert(
+                'Please enter your username before proceeding with password recovery.'
+              );
+              return;
+            }
+
+            const otpContainer = document.getElementById('otpContainer');
+
+            // Add OTP input + Send button only if not already present
+            // if (!document.getElementById("otpInput")) {
+            otpContainer.innerHTML = `
+                <button type="button" onclick="verifyWithEmail()">Verify with Email</button>
+                <button type="button" onclick="verifyWithPhone()">Verify with Phone</button>
+            `;
+            //}
+          }
+
+          async function verifyWithEmail() {
+            const otpContainer = document.getElementById('otpContainer');
+            const username = document.getElementById('username').value.trim();
+
+              try {
+                  const response = await fetch('/api/auth/send-otp', {
+                      method: "POST",
+                      headers: {
+                          "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({username, method: "mail"}),
+                      credentials: 'include',
+                      mode: 'cors'
+                  })
+
+                  const data = await response.json();
+
+                  if (data.success) {
+                    alert(data.data);
+                
+                     otpContainer.innerHTML = `
+                     <input type="text" id="otpInput" placeholder="Enter OTP sent to your Email" />
+                     <button type="button" onclick="submitOtp('mail')">Send</button>
+                     `;
+                  } else {
+                      alert(data.error)
+                      window.location.href = "/"
+                  }
+              } catch (err) {
+                  console.log("error while sending otp -", err);
+              } 
+
+                      }
+
+          function verifyWithPhone() {
+            const otpContainer = document.getElementById('otpContainer');
+            otpContainer.innerHTML = `
+                <input type="text" id="otpInput" placeholder="Enter OTP sent to your Phone" />
+                <button type="button" onclick="submitOtp('phone')">Send</button>
+            `;
+            setTimeout(() => {
+              alert(
+                'This service is not available as of now. Please try verifying by email'
+              );
+            }, 0);
+          }
+
+          async function submitOtp(method) {
+            const otp = document.getElementById('otpInput').value;
+            if (!otp) {
+              alert('Please enter the OTP.');
+              return;
+            }
+            const username = document.getElementById('username').value.trim();
+
+            // Here you would send OTP to the server
+            
+            try {
+                const response = await fetch('/api/auth/verify-otp', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    mode: "cors",
+                    body: JSON.stringify({username, method, otp})
+                })
+
+                const data = await response.json();
+
+                if (data.success === true) {
+                const otpContainer = document.getElementById('otpContainer');
+                otpContainer.innerHTML = `
+                <input type="password" id="newPasswordInput" placeholder="Enter New Password" />
+                <button type="button" onclick="submitNewPassword()">Send</button>
+                `;
+
+                setTimeout(() => {
+                    alert(data.data);
+                }, 1);
+                } else {
+                    alert(data.error);
+                    window.location.href = "/"
+                }
+            } catch (err) {
+                console.log("error while verifying otp -", otp)
+            }
+          }
+
+          async function submitNewPassword() {
+            const newPassword =
+              document.getElementById('newPasswordInput').value;
+            if (!newPassword) {
+              alert('Please enter the new Password');
+              return;
+            }
+            
+            const username = document.getElementById("username").value.trim();
+
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    mode: "cors",
+                    body: JSON.stringify({username, password: newPassword})
+                })
+
+                const data = await reponse.json();
+                if (data.success) {
+                    alert(data.data);
+                    window.location.href = "/";
+                 } else {
+                    alert(data.error);
+                    window.location.href = "/";
+                }
+            } catch (err) {
+                console.log("error while changing password -", err)
+                alert(err.error);
+                window.location.href = "/";
             }
           }
         </script>
