@@ -35,7 +35,7 @@ async function controller(req, res, next) {
         const { accessToken, refreshToken } = authService.
             createTokens(decodeToken.username, decodeToken.provider);
 
-        res.cookie(config.ACCESS_TOKEN_HEADER_FIELD, newAccessToken, {
+        res.cookie(config.ACCESS_TOKEN_HEADER_FIELD, accessToken, {
             httpOnly: true,
             secure: true,
             sameSite: "None"
